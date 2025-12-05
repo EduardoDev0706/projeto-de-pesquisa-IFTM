@@ -12,13 +12,13 @@ NOME_ARQUIVO_OUTPUT_EXCEL = 'dados_rpi_extraidos.xlsx'
 def processar_xml_para_tabelas(arquivo_xml, arquivo_csv, arquivo_excel):
     """
     Função principal que lê um XML da RPI e o converte
-    em arquivos CSV e Excel.
+    em arquivos CSV e Excel, filtrando apenas despachos DEFERIDOS.
     """
 
     # Verifica se o arquivo de entrada existe
     if not os.path.exists(arquivo_xml):
         print(f"ERRO: Arquivo de entrada não encontrado!")
-        print(f"Verifique se o nome '{arquivo_xml} está correto e na mesma pasta.")
+        print(f"Verifique se o nome '{arquivo_xml}' está correto e na mesma pasta.")
         return
     
     print(f"Iniciando processamento do arquivo: {arquivo_xml}...")
@@ -43,6 +43,12 @@ def processar_xml_para_tabelas(arquivo_xml, arquivo_csv, arquivo_excel):
             codigo = despacho.find('codigo').text if despacho.find('codigo') is not None else None
             titulo = despacho.find('titulo').text if despacho.find('titulo') is not None else None
 
+            # --- NOVO FILTRO: Apenas "Deferidos" ---
+            # Verifica se o título existe e se contém a palavra "Deferimento"
+            if titulo is None or "Deferimento" not in titulo:
+                continue  # Pula para o próximo despacho se não for deferimento
+            # ---------------------------------------
+
             # Bloco <processo-patente>
             processo_elem = despacho.find('processo-patente')
 
@@ -51,7 +57,8 @@ def processar_xml_para_tabelas(arquivo_xml, arquivo_csv, arquivo_excel):
             titulares = []
 
             if processo_elem is not None:
-                numero_processo = processo_elem.find('numero').text if processo_elem.find is not None else None
+                # Correção: Verifica se o elemento 'numero' foi encontrado, não a função find
+                numero_processo = processo_elem.find('numero').text if processo_elem.find('numero') is not None else None
                 data_deposito = processo_elem.find('data-deposito').text if processo_elem.find('data-deposito') is not None else None
 
 
@@ -78,10 +85,10 @@ def processar_xml_para_tabelas(arquivo_xml, arquivo_csv, arquivo_excel):
             dados_extraidos.append(dados_despacho)
 
         if not dados_extraidos:
-            print("Aviso: Nenhum despacho foi encontrado no arquivo. Arquivos de saída estarão vazios.")
+            print("Aviso: Nenhum despacho de 'Deferimento' foi encontrado no arquivo. Arquivos de saída estarão vazios.")
             return
         
-        print(f"Total de {len(dados_extraidos)} despachos encontrados. Convertendo para DataFrame...")
+        print(f"Total de {len(dados_extraidos)} despachos de 'Deferimento' encontrados. Convertendo para DataFrame...")
 
         # Converte a lista de dicionários em uma tabela (DataFrame)
         df = pd.DataFrame(dados_extraidos)
@@ -95,7 +102,7 @@ def processar_xml_para_tabelas(arquivo_xml, arquivo_csv, arquivo_excel):
         df.to_excel(arquivo_excel, index=False, sheet_name=f'RPI_{numero_revista}')
 
         print("\n--- SUCESSO! ---")
-        print(f"Arquivos '{arquivo_csv}' e '{arquivo_excel}' foram criados com sucesso.")
+        print(f"Arquivos gerados contendo apenas os deferimentos.")
 
     except ET.ParseError:
         print(f"ERRO: Falha ao analisar o XML. O arquivo '{arquivo_xml}' pode estar corrompido.")
